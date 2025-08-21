@@ -3,6 +3,8 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <iostream>
+#include <iomanip>
 
 namespace {
 
@@ -63,30 +65,25 @@ std::vector<double> pacf_durbin_levinson(const std::vector<double>& x, int m, bo
     double E = g[0]; // prediction error variance at order k
 
     for (int k = 1; k <= m_eff; ++k) {
-        // numerator: g[k] - sum_{j=1}^{k-1} PHI[k-1][j] * g[k-j]
         double num = g[k];
-        for (int j = 1; j <= k - 1; ++j) {
-            num -= PHI[k - 1][j] * g[k - j];
-        }
+        for (int j = 1; j <= k - 1; ++j) num -= PHI[k - 1][j] * g[k - j];
 
-        const double denom = E;
         double a_k = 0.0;
-        if (std::fabs(denom) > 0.0) {
-            a_k = num / denom; // reflection coefficient
-        }
+        if (std::fabs(E) > 0.0) a_k = num / E;
 
-        // Update PHI_k from PHI_{k-1}
+        // clamp for numerical safety
+        if (a_k >  1.0) a_k =  1.0;
+        if (a_k < -1.0) a_k = -1.0;
+
         PHI[k] = std::vector<double>(k + 1, 0.0);
         PHI[k][k] = a_k;
-        for (int j = 1; j <= k - 1; ++j) {
+        for (int j = 1; j <= k - 1; ++j)
             PHI[k][j] = PHI[k - 1][j] - a_k * PHI[k - 1][k - j];
-        }
 
-        // Update prediction error variance
-        E = E * (1.0 - a_k * a_k);
+        E *= (1.0 - a_k * a_k);
+        if (E < 0.0 && std::fabs(E) < 1e-14) E = 0.0; // avoid tiny negatives
 
-        // Store PACF at lag k
-        phi[k] = PHI[k][k];
+        phi[k] = PHI[k][k]; // PACF(k)
     }
 
     return phi;
@@ -99,3 +96,65 @@ double pacf_at_m(const std::vector<double>& x, int m, bool unbiased) {
     return phi[m];
 }
 
+// ACF 0..m via autocovariances normalized by gamma(0)
+static std::vector<double> acf_from_autocov(const std::vector<double>& x, int m, bool unbiased) {
+    const int N = static_cast<int>(x.size());
+    const int m_eff = (N > 0) ? std::min(m, N - 1) : 0;
+    std::vector<double> g = autocovariances(x, m_eff, unbiased);
+    std::vector<double> r(m_eff + 1, 0.0);
+    if (g.empty() || g[0] == 0.0) return r;
+    for (int k = 0; k <= m_eff; ++k) r[k] = g[k] / g[0];
+    return r;
+}
+
+int pick_p_from_pacf(const std::vector<double>& x, int K, bool unbiased) {
+    const int N = static_cast<int>(x.size());
+    if (N < 3 || K <= 0) return 0;
+    const int m_eff = std::min(K, N - 1);
+    const double band = 1.96 / std::sqrt(static_cast<double>(N));
+    const std::vector<double> phi = pacf_durbin_levinson(x, m_eff, unbiased);
+    int p = 0;
+#ifdef DEBUG
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "PACF debug: T=" << N << ", K=" << m_eff << ", band=" << band << "\n";
+    int show = std::min(m_eff, 10);
+    for (int k = 1; k <= show; ++k) {
+        std::cout << "  lag " << std::setw(2) << k
+                  << ": PACF=" << std::setw(8) << phi[k]
+                  << (std::fabs(phi[k]) > band ? "  *" : "") << "\n";
+    }
+#endif
+    for (int k = 1; k <= m_eff; ++k) {
+        if (std::fabs(phi[k]) > band) p = k;
+    }
+#ifdef DEBUG
+    std::cout << "Chosen p = " << p << "\n";
+#endif
+    return p;
+}
+
+int pick_q_from_acf(const std::vector<double>& x, int K, bool unbiased) {
+    const int N = static_cast<int>(x.size());
+    if (N < 3 || K <= 0) return 0;
+    const int m_eff = std::min(K, N - 1);
+    const double band = 1.96 / std::sqrt(static_cast<double>(N));
+    const std::vector<double> r = acf_from_autocov(x, m_eff, unbiased);
+    int q = 0;
+#ifdef DEBUG
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "ACF  debug: T=" << N << ", K=" << m_eff << ", band=" << band << "\n";
+    int show = std::min(m_eff, 10);
+    for (int k = 1; k <= show; ++k) {
+        std::cout << "  lag " << std::setw(2) << k
+                  << ":  ACF=" << std::setw(8) << r[k]
+                  << (std::fabs(r[k]) > band ? "  *" : "") << "\n";
+    }
+#endif
+    for (int k = 1; k <= m_eff; ++k) {
+        if (std::fabs(r[k]) > band) q = k;
+    }
+#ifdef DEBUG
+    std::cout << "Chosen q = " << q << "\n";
+#endif
+    return q;
+}

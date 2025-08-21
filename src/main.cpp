@@ -11,7 +11,7 @@
 #include "ADF.h"
 
 int main() {
-  std::ifstream file("/home/daniel/data/stonks/AAPL_data.csv");
+  std::ifstream file("/home/daniel/data/stonks/GOOG_data.csv");
 
   if (!file.is_open()) { 
     throw std::runtime_error("File couldn't be opened");
@@ -49,16 +49,22 @@ int main() {
   if (d > 2) {
     std::cout << "WARNING: TOOK MORE THAN " << d << " DIFFERENCING. DATA MIGHT BE BAD" << std::endl;
   }
-  std::cout << "I section" << std::endl;
-  std::cout << "  took d differences: " << d << "\n";
+  std::cout << "d = " << d << "\n";
+  /*
   std::cout << "ADF Statistic: " << result.statistic << "\n";
   std::cout << "p-value: " << result.p_value << "\n";
-  std::cout << "Stationary (5% crit): " << (result.stationary ? "true" : "false") << "\n";
+  std::cout << "Stationary  " << (result.stationary ? "true" : "false") << "\n";
+  */
 
   //ARIMA(p, d, q);
-  // d is complete, now p is needed. this is done using PACF
-  double p = pacf_at_m(curr, (int)sqrt(curr.size()), false);
-  std::cout << "p is " << p << std::endl;
+
+  // Choose K ~ sqrt(T)
+  const int K = static_cast<int>(std::sqrt(static_cast<double>(curr.size())));
+  int p = pick_p_from_pacf(curr, K, false);
+  int q = pick_q_from_acf(curr, K, false);
+  std::cout << "p = " << p << "\n";
+  std::cout << "q = " << q << "\n";
+
 
 
 

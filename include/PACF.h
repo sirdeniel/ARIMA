@@ -12,5 +12,12 @@ std::vector<double> pacf_durbin_levinson(const std::vector<double>& x, int m, bo
 // Convenience: PACF at a single lag m (m >= 1). Returns NaN if not computable.
 double pacf_at_m(const std::vector<double>& x, int m, bool unbiased = false);
 
-#endif // PACF_H
+// Pick AR order p from PACF with 95% band (1.96/sqrt(T)).
+// Scans lags 1..K and returns the last k with |PACF(k)| > band; returns 0 if none.
+int pick_p_from_pacf(const std::vector<double>& x, int K, bool unbiased = false);
 
+// Pick MA order q from ACF with 95% band (1.96/sqrt(T)).
+// Uses autocovariances normalized by gamma(0); scans lags 1..K and returns last k above band; 0 if none.
+int pick_q_from_acf(const std::vector<double>& x, int K, bool unbiased = false);
+
+#endif // PACF_H
