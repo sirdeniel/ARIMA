@@ -8,7 +8,7 @@ Please read `doc/how_to_get_started.md` if you want to run it yourself.
 
 ## What is ARIMA?
 
-ARIMA stands for **Auto-Regressive Integrated Moving Average** - a generalization of autoregressive (**AR**) and moving average (**MA**) models. The autoregressive model uses past values of the series to predict the future; and the moving average focuses on the relationship between an observation and a residual error. The **I** in ARIMA stands for integrated, which preprocesses our data to ensure stationarity (the assumption that statistical properties of data remain constant over time).
+ARIMA stands for **Auto-Regressive Integrated Moving Average** - a generalization of autoregressive (**AR**) and moving average (**MA**) models. The autoregressive model uses past values of the series to predict the future; the moving average focuses on the relationship between an observation and a residual error. The **I** in ARIMA stands for integrated, which preprocesses our data to ensure stationarity (the assumption that statistical properties of data remain constant over time).
 
 ## Implementation Overview
 ### Step 1: Data Preprocessing and Model Selection
