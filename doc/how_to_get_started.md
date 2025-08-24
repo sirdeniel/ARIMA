@@ -34,8 +34,3 @@ make && ./bin/arima
 ```bash
 python3 src/test.py
 ```
-## Debugging
-For verbose output, compile with debug flags:
-```bash
-make CFLAGS="-DVERBOSE -DDEBUG"
-```
