@@ -61,11 +61,20 @@ Building ARIMA from scratch presented several numerical and algorithmic challeng
 
 ## Implementation Differences
 
-This C++ implementation uses Yule-Walker equations for AR parameter estimation followed by gradient descent for MA parameters, while Python's statsmodels uses maximum likelihood estimation (MLE) for joint parameter estimation.
+In industry-standard implementations such as Python’s *statsmodels*, parameter estimation is typically done via **Maximum Likelihood Estimation (MLE)**. MLE jointly estimates all parameters (AR coefficients, MA coefficients, and error variance) by maximizing the likelihood function  
 
-**Maximum Likelihood Estimation** finds the parameter values that make the observed data most likely by maximizing the likelihood function L(θ) = P(data | θ). For ARIMA models, MLE jointly estimates all parameters (AR coefficients, MA coefficients, and error variance) by assuming residuals follow a normal distribution and optimizing the log-likelihood using advanced numerical methods.
+\[
+L(\theta) = P(\text{data} \mid \theta),
+\]  
 
-The two-step approach (Yule-Walker → gradient descent) versus joint MLE optimization leads to minute differences in results - typically within 1-3% - which is expected and normal behavior between implementations. Both methods are mathematically sound, with MLE being theoretically optimal for large samples while the sequential approach offers computational simplicity.
+assuming residuals follow a normal distribution. This joint optimization advanced numerical solvers and careful handling of likelihood surfaces.
+
+I attempted solving it from a different angle:  
+- **AR parameters** estimated via **Yule–Walker equations** (a closed-form system of linear equations based on autocovariances).  
+- **MA parameters** estimated via **conditional least squares** using gradient descent with finite-difference gradients and regularization.  
+
+This two-step approach optimizes computational simplicity. The results naturally differ slightly from MLE-based methods (typically within 1–3%), but remain mathematically sound and give a practical perspective on how ARIMA can be built up “from first principles.”  
+
 
 ## Future Enhancements
 
@@ -73,7 +82,6 @@ Several improvements could further enhance this implementation:
 
 ### Advanced Optimization
 - **Quasi-Newton methods** (L-BFGS) for faster MA parameter convergence
-- **Multi-start optimization** to better escape local minima
 
 ### Performance Improvements
 - **Parallel processing** for parameter grid search and cross-validation
