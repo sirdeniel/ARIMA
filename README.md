@@ -61,13 +61,7 @@ Building ARIMA from scratch presented several numerical and algorithmic challeng
 
 ## Implementation Differences
 
-In industry-standard implementations such as Python’s *statsmodels*, parameter estimation is typically done via **Maximum Likelihood Estimation (MLE)**. MLE jointly estimates all parameters (AR coefficients, MA coefficients, and error variance) by maximizing the likelihood function  
-
-\[
-L(\theta) = P(\text{data} \mid \theta),
-\]  
-
-assuming residuals follow a normal distribution. This joint optimization advanced numerical solvers and careful handling of likelihood surfaces.
+In industry-standard implementations such as Python's *statsmodels*, parameter estimation is typically done via **Maximum Likelihood Estimation (MLE)**. MLE jointly estimates all parameters (AR coefficients, MA coefficients, and error variance) by maximizing the likelihood function `L(θ) = P(data | θ)`, assuming residuals follow a normal distribution. This joint optimization uses advanced numerical solvers and careful handling of likelihood surfaces.
 
 I attempted solving it from a different angle:  
 - **AR parameters** estimated via **Yule–Walker equations** (a closed-form system of linear equations based on autocovariances).  
