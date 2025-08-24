@@ -1,4 +1,5 @@
 #include "ADF.h"
+
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -6,24 +7,25 @@
 #include <iomanip>
 
 namespace adf {
-
-static inline double stdnorm_cdf(double x) {
-    // Phi(x) via erf
-    return 0.5 * std::erfc(-x / std::sqrt(2.0));
-}
-
-// Approximate MacKinnon-style p-value for ADF with intercept only
-// Calibrate a linear transform of t to standard normal so that
-// p(-3.43)=0.01 and p(-2.57)=0.10 (asymptotic critical values).
-static inline double approx_adf_pvalue_const(double t_stat) {
-    const double a = 1.84038;   // intercept of mapping to z
-    const double b = 1.214;     // slope of mapping to z
-    const double z = a + b * t_stat;
-    double p = stdnorm_cdf(z);  // left-tailed p-value
-    if (p < 1e-12) p = 1e-12;
-    if (p > 1.0 - 1e-12) p = 1.0 - 1e-12;
-    return p;
-}
+    constexpr double SQRT_2 = 1.4142135623730951;
+    constexpr double MACKINNON_INTERCEPT = 1.84038;
+    constexpr double MACKINNON_SLOPE = 1.214;
+    constexpr double MIN_P_VALUE = 1e-12;
+    constexpr double MAX_P_VALUE = 1.0 - 1e-12;
+    constexpr double CRITICAL_VALUE_5_PERCENT = -2.86;
+    constexpr int NUM_REGRESSORS = 2;  // intercept + y_{t-1}
+    
+    static inline double stdnorm_cdf(double x) {
+        return 0.5 * std::erfc(-x / SQRT_2);
+    }
+    
+    static inline double approx_adf_pvalue_const(double t_stat) {
+        const double z = MACKINNON_INTERCEPT + MACKINNON_SLOPE * t_stat;
+        double p = stdnorm_cdf(z);
+        if (p < MIN_P_VALUE) p = MIN_P_VALUE;
+        if (p > MAX_P_VALUE) p = MAX_P_VALUE;
+        return p;
+    }
 
 Result adfuller(const std::vector<double>& series, int max_lags)
 {
@@ -84,8 +86,7 @@ Result adfuller(const std::vector<double>& series, int max_lags)
     }
 
     // Error variance and SE(beta)
-    const int k = 2; // intercept + y_{t-1}
-    const int dof = static_cast<int>(nn) - k;
+    const int dof = static_cast<int>(nn) - NUM_REGRESSORS;
     const double sigma2 = (dof > 0) ? (sse / dof) : 0.0;
     const double se_beta = (det != 0.0) ? std::sqrt(sigma2 * (static_cast<double>(nn) / det)) : 0.0;
 
@@ -93,18 +94,16 @@ Result adfuller(const std::vector<double>& series, int max_lags)
     const double adf_t = (se_beta > 0.0) ? (beta / se_beta) : 0.0;
     const double p_val = approx_adf_pvalue_const(adf_t);
 
-    // Decision by hardcoded asymptotic 5% critical value (constant-only case)
-    const double crit_5 = -2.86; // large-sample, intercept only
-    const bool is_stationary = (adf_t < crit_5);
+    // Decision using asymptotic 5% critical value (constant-only case)
+    const bool is_stationary = (adf_t < CRITICAL_VALUE_5_PERCENT);
 
     #ifdef DEBUG
     std::cout << "SSE = " << sse << ", sigma^2 = " << sigma2 << ", SE(beta) = " << se_beta << "\n";
     std::cout << "ADF t-stat = " << adf_t << ", p-value ~= " << p_val << "\n";
-    std::cout << "Decision@5% (crit=" << crit_5 << ") stationary? " << (is_stationary ? "true" : "false") << "\n";
+    std::cout << "Decision@5% (crit=" << CRITICAL_VALUE_5_PERCENT << ") stationary? " << (is_stationary ? "true" : "false") << "\n";
     #endif
 
 
-    
     int used_lags = (max_lags > 0) ? std::min<int>(max_lags, static_cast<int>(m) - 1) : 0;
 
     return Result{adf_t, p_val, used_lags, is_stationary};
