@@ -8,6 +8,7 @@
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
+#include <limits>
 
 namespace {
     constexpr double SINGULAR_MATRIX_THRESHOLD = 1e-10;
